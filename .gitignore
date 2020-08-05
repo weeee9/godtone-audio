@@ -1,0 +1,7 @@
+.env
+*.json
+*.csr
+*.key
+/test
+env_variables.yaml
+main

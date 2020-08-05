@@ -1,0 +1,10 @@
+runtime: go113
+
+resources:
+  cpu: 2
+  memory_gb: 4
+  disk_size_gb: 10
+
+env_variables:
+  APP_PORT: 8080
+  APP_SERVER_ENV: app_engine
