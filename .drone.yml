@@ -1,0 +1,42 @@
+---
+kind: pipeline
+type: docker
+name: godtone-app
+
+clone:
+  git:
+    image: plugins/git
+    tags: true
+
+steps:
+- name: publish-to-docker-hub
+  image: plugins/docker
+  dockerfile: ./Dockerfile
+  settings:
+    auto_tag: true
+    cache_from: weeee9/godtone
+    repo: weeee9/godtone
+    username: 
+      from_secret: DOCKER_USERNAME
+    password: 
+      from_secret: DOCKER_PASSWORD
+
+- name: publish-to-gcr
+  image: plugins/gcr
+  dockerfile: ./Dockerfile
+  settings:
+    auto_tag: true
+    registry: asia.gcr.io
+    cache_from: asia.gcr.io/godtone/godtone
+    repo: asia.gcr.io/godtone/godtone
+    json_key:
+      from_secret: GAE_CREDENTIALS
+
+- name: deploy
+  image: nytimes/drone-gae
+  settings:
+    action: deploy
+    app_file: app.yaml
+  environment:
+    GAE_CREDENTIALS:
+      from_secret: GAE_CREDENTIALS
