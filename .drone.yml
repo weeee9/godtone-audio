@@ -40,3 +40,14 @@ steps:
   environment:
     GAE_CREDENTIALS:
       from_secret: GAE_CREDENTIALS
+
+# - name: deploy-to-gce
+#   image: google/cloud-sdk:alpine
+#   environment:
+#     json_key:
+#       from_secret: GCR_CREDENTIAL
+#   commands:
+#     - echo $${json_key} > /tmp/cred.json
+#     - gcloud auth activate-service-account deploy@godtone.iam.gserviceaccount.com --key-file /tmp/cred.json
+#     - gcloud config set project godtone
+#     - gcloud compute instances update-container godtone --zone asia-east1-b --container-image=asia.gcr.io/godtone/godtone:latest
