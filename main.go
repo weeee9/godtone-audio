@@ -52,6 +52,8 @@ func main() {
 	router := gin.Default()
 
 	router.Static("/m4a", "./m4a")
+	router.Static("/mp4", "./mp4")
+	router.Static("/img", "./img")
 
 	router.POST("/callback", callback)
 	router.GET("/ping", func(c *gin.Context) {
@@ -102,7 +104,6 @@ func callback(c *gin.Context) {
 				case "335919905":
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 3000)
 				}
-				log.Println(audioMsg.OriginalContentURL)
 				if _, err := bot.PushMessage(groupID, audioMsg).Do(); err != nil {
 					log.Printf(" [linebot] error: %v\n", err.Error())
 					return
@@ -117,6 +118,17 @@ func callback(c *gin.Context) {
 				}
 				if message.Text == "爽阿刺阿" || message.Text == "爽啊刺啊" {
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "sodaDrinkingFeelSoGood"), 2000)
+				}
+				if message.Text == "爽阿刺阿.mp4" || message.Text == "爽啊刺啊.mp4" {
+					vid := linebot.NewVideoMessage(
+						getMP4URL(cfg, "sodaDrinkingFeelSoGood"),
+						getImgURL(cfg, "sodaDrinkingFeelSoGood"),
+					)
+					if _, err := bot.PushMessage(groupID, vid).Do(); err != nil {
+						log.Printf(" [linebot] error: %v\n", err.Error())
+						return
+					}
+					return
 				}
 				if strings.Contains(message.Text, "777") ||
 					strings.Contains(message.Text, "聊天室") {
@@ -134,7 +146,6 @@ func callback(c *gin.Context) {
 				if strings.Contains(message.Text, "太神拉") || message.Text == "carry" {
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 3000)
 				}
-				log.Println(audioMsg.OriginalContentURL)
 				if _, err := bot.PushMessage(groupID, audioMsg).Do(); err != nil {
 					log.Printf(" [linebot] error: %v\n", err.Error())
 					return
@@ -146,6 +157,14 @@ func callback(c *gin.Context) {
 
 func getM4AURL(c config.Config, filename string) string {
 	return fmt.Sprintf("%s/m4a/%s.m4a", c.Server.Addr, filename)
+}
+
+func getMP4URL(c config.Config, filename string) string {
+	return fmt.Sprintf("%s/mp4/%s.mp4", c.Server.Addr, filename)
+}
+
+func getImgURL(c config.Config, filename string) string {
+	return fmt.Sprintf("%s/img/%s.png", c.Server.Addr, filename)
 }
 
 func loadCredFromGSM(cfg *config.Config) error {
