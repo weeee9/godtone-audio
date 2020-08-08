@@ -5,82 +5,47 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
+
+	"github.com/weeee9/godtone/config"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"github.com/gin-gonic/gin"
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/line/line-bot-sdk-go/linebot"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
-type lineCred struct {
-	Key   string `datastore:"LINE_CHANNEL_SECRET"`
-	Token string `datastore:"LINE_CHANNEL_TOKEN"`
-}
-
-const (
-	appURL string = "https://godtone.df.r.appspot.com/"
-
-	imGoingTosleep         string = appURL + "m4a/imGoingTosleep.m4a"
-	youHaveToSaidItFirst   string = appURL + "m4a/youHaveToSaidItFirst.m4a"
-	sodaDrinkingFeelSoGood string = appURL + "m4a/sodaDrinkingFeelSoGood.m4a"
-	sevenInTheChat         string = appURL + "m4a/sevenInTheChat.m4a"
-	comeHereBitch          string = appURL + "m4a/comeHereBitch.m4a"
-	penetrateMy88          string = appURL + "m4a/penetrateMy88.m4a"
-	goDie                  string = appURL + "m4a/godie.m4a"
-	carry                  string = appURL + "m4a/carry.m4a"
-	doYouHaveAJob          string = appURL + "m4a/doYouHaveAJob.m4a"
-)
-
 var (
 	client *secretmanager.Client
+	cfg    config.Config
 	bot    *linebot.Client
 	err    error
-
-	secret, token string
 )
 
-func main() {
-	server := os.Getenv("APP_SERVER_ENV")
-	if server == "app_engine" {
-		client, err = secretmanager.NewClient(context.TODO())
-		if err != nil {
-			log.Fatal(err)
-		}
-		secretResp, err := client.AccessSecretVersion(context.TODO(), &secretmanagerpb.AccessSecretVersionRequest{
-			Name: "projects/209245468577/secrets/LINE_CHANNEL_SECRET/versions/latest",
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		tokenResp, err := client.AccessSecretVersion(context.TODO(), &secretmanagerpb.AccessSecretVersionRequest{
-			Name: "projects/209245468577/secrets/LINE_CHANNEL_TOKEN/versions/latest",
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		secret = string(secretResp.Payload.Data)
-		token = string(tokenResp.Payload.Data)
-	} else {
-		secret = os.Getenv("LINE_CHANNEL_SECRET")
-		token = os.Getenv("LINE_CHANNEL_TOKEN")
-	}
-
-	bot, err = linebot.New(
-		secret,
-		token,
-	)
+func init() {
+	cfg, err = config.Environ()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	router := gin.Default()
-	port := os.Getenv("APP_PORT")
-	if port == "" {
-		port = "80"
+	if !cfg.Server.Debug {
+		log.Println(" [godtone] Load Cred From CSM")
+		loadCredFromGSM(&cfg)
 	}
+}
+
+func init() {
+	bot, err = linebot.New(
+		cfg.LineCred.Secret,
+		cfg.LineCred.Token,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func main() {
+	router := gin.Default()
 
 	router.Static("/m4a", "./m4a")
 
@@ -92,7 +57,7 @@ func main() {
 		})
 	})
 
-	router.Run(":" + port)
+	router.Run(":" + cfg.Server.Port)
 }
 
 func callback(c *gin.Context) {
@@ -117,121 +82,84 @@ func callback(c *gin.Context) {
 			groupID := event.Source.GroupID
 
 			switch message := event.Message.(type) {
-
 			case *linebot.StickerMessage:
-				fmt.Println(message.StickerID)
+				audioMsg := &linebot.AudioMessage{}
 				switch message.StickerID {
 				case "277504782":
-					log.Println(imGoingTosleep)
-					aud := linebot.NewAudioMessage(imGoingTosleep, 1000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "imGoingToSleep"), 1000)
 				case "277504783":
-					log.Print(comeHereBitch)
-					aud := linebot.NewAudioMessage(comeHereBitch, 3000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "comeHereBitch"), 3000)
 				case "277504795":
-					log.Println(youHaveToSaidItFirst)
-					aud := linebot.NewAudioMessage(youHaveToSaidItFirst, 1000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "youHaveToSaidItFirst"), 1000)
 				case "335919878":
-					log.Println(sodaDrinkingFeelSoGood)
-					aud := linebot.NewAudioMessage(sodaDrinkingFeelSoGood, 2000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "sodaDrinkingFeelSoGood"), 2000)
 				case "277504788":
-					log.Println(doYouHaveAJob)
-					aud := linebot.NewAudioMessage(doYouHaveAJob, 2000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "doYouHaveAJob"), 2000)
 				case "335919905":
-					log.Println(carry)
-					aud := linebot.NewAudioMessage(carry, 3000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 3000)
+				}
+				fmt.Println(audioMsg)
+				if _, err := bot.PushMessage(groupID, audioMsg).Do(); err != nil {
+					log.Printf(" [linebot] error: %v\n", err.Error())
 					return
 				}
-
 			case *linebot.TextMessage:
+				audioMsg := &linebot.AudioMessage{}
 				if strings.Contains(message.Text, "那我也要睡") {
-					log.Println(imGoingTosleep)
-					aud := linebot.NewAudioMessage(imGoingTosleep, 1000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "imGoingToSleep"), 1000)
 				}
 				if message.Text == "你要先講" {
-					log.Println(youHaveToSaidItFirst)
-					aud := linebot.NewAudioMessage(youHaveToSaidItFirst, 1000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "youHaveToSaidItFirst"), 1000)
 				}
 				if message.Text == "爽阿刺阿" || message.Text == "爽啊刺啊" {
-					log.Println(sodaDrinkingFeelSoGood)
-					aud := linebot.NewAudioMessage(sodaDrinkingFeelSoGood, 2000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "sodaDrinkingFeelSoGood"), 2000)
 				}
 				if strings.Contains(message.Text, "777") ||
 					strings.Contains(message.Text, "聊天室") {
-					log.Println(sevenInTheChat)
-					aud := linebot.NewAudioMessage(sevenInTheChat, 2000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 2000)
 				}
 				if strings.Contains(message.Text, "過來一下") {
-					log.Print(comeHereBitch)
-					aud := linebot.NewAudioMessage(comeHereBitch, 3000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "comeHereBitch"), 3000)
 				}
 				if strings.Contains(message.Text, "穿過我的") {
-					log.Println(penetrateMy88)
-					aud := linebot.NewAudioMessage(penetrateMy88, 3000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "penetrateMy88"), 3000)
 				}
-				if strings.Contains(message.Text, "去死一死") {
-					log.Println(goDie)
-					aud := linebot.NewAudioMessage(goDie, 1000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
-					return
+				if strings.Contains(message.Text, "去死一死") || message.Text == "7414" {
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "goDie"), 1000)
 				}
-				if strings.Contains(message.Text, "太神拉") || message.Text == carry {
-					log.Println(carry)
-					aud := linebot.NewAudioMessage(carry, 3000)
-					if _, err := bot.PushMessage(groupID, aud).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-					}
+				if strings.Contains(message.Text, "太神拉") || message.Text == "carry" {
+					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 3000)
+				}
+				if _, err := bot.PushMessage(groupID, audioMsg).Do(); err != nil {
+					log.Printf(" [linebot] error: %v\n", err.Error())
 					return
 				}
 			}
 		}
 	}
+}
+
+func getM4AURL(c config.Config, filename string) string {
+	return fmt.Sprintf("%s/m4a/%s.m4a", c.Server.Addr, filename)
+}
+
+func loadCredFromGSM(cfg *config.Config) {
+	client, err = secretmanager.NewClient(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+	secretResp, err := client.AccessSecretVersion(context.TODO(), &secretmanagerpb.AccessSecretVersionRequest{
+		Name: "projects/209245468577/secrets/LINE_CHANNEL_SECRET/versions/latest",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	tokenResp, err := client.AccessSecretVersion(context.TODO(), &secretmanagerpb.AccessSecretVersionRequest{
+		Name: "projects/209245468577/secrets/LINE_CHANNEL_TOKEN/versions/latest",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	cfg.LineCred.Secret = string(secretResp.Payload.Data)
+	cfg.LineCred.Token = string(tokenResp.Payload.Data)
 }
