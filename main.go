@@ -30,7 +30,9 @@ func init() {
 
 	if !cfg.Server.Debug {
 		log.Println(" [godtone] Load Cred From CSM")
-		loadCredFromGSM(&cfg)
+		if err := loadCredFromGSM(&cfg); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -143,23 +145,24 @@ func getM4AURL(c config.Config, filename string) string {
 	return fmt.Sprintf("%s/m4a/%s.m4a", c.Server.Addr, filename)
 }
 
-func loadCredFromGSM(cfg *config.Config) {
+func loadCredFromGSM(cfg *config.Config) error {
 	client, err = secretmanager.NewClient(context.TODO())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	secretResp, err := client.AccessSecretVersion(context.TODO(), &secretmanagerpb.AccessSecretVersionRequest{
 		Name: "projects/209245468577/secrets/LINE_CHANNEL_SECRET/versions/latest",
 	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	tokenResp, err := client.AccessSecretVersion(context.TODO(), &secretmanagerpb.AccessSecretVersionRequest{
 		Name: "projects/209245468577/secrets/LINE_CHANNEL_TOKEN/versions/latest",
 	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	cfg.LineCred.Secret = string(secretResp.Payload.Data)
 	cfg.LineCred.Token = string(tokenResp.Payload.Data)
+	return nil
 }

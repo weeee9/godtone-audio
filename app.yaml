@@ -7,6 +7,6 @@ resources:
 
 env_variables:
   APP_PORT: 8080
-  APP_SERVER_DUBUG: 0
+  APP_SERVER_DEBUG: 0
   APP_SERVER_PROTO: https
   APP_SERVER_HOST: godtone.df.r.appspot.com
