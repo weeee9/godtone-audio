@@ -119,17 +119,6 @@ func callback(c *gin.Context) {
 				if message.Text == "爽阿刺阿" || message.Text == "爽啊刺啊" {
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "sodaDrinkingFeelSoGood"), 2000)
 				}
-				if message.Text == "爽阿刺阿.mp4" || message.Text == "爽啊刺啊.mp4" {
-					vid := linebot.NewVideoMessage(
-						getMP4URL(cfg, "sodaDrinkingFeelSoGood"),
-						getImgURL(cfg, "sodaDrinkingFeelSoGood"),
-					)
-					if _, err := bot.PushMessage(groupID, vid).Do(); err != nil {
-						log.Printf(" [linebot] error: %v\n", err.Error())
-						return
-					}
-					return
-				}
 				if strings.Contains(message.Text, "777") ||
 					strings.Contains(message.Text, "聊天室") {
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 2000)
