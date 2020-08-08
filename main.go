@@ -11,6 +11,7 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"github.com/gin-gonic/gin"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/line/line-bot-sdk-go/linebot"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
@@ -27,13 +28,14 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	if !cfg.Server.Debug {
 		log.Println(" [godtone] Load Cred From CSM")
 		if err := loadCredFromGSM(&cfg); err != nil {
 			log.Fatal(err)
 		}
 	}
+	fmt.Println(cfg.LineCred)
+
 }
 
 func init() {
@@ -100,7 +102,7 @@ func callback(c *gin.Context) {
 				case "335919905":
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 3000)
 				}
-				fmt.Println(audioMsg)
+				log.Println(audioMsg.OriginalContentURL)
 				if _, err := bot.PushMessage(groupID, audioMsg).Do(); err != nil {
 					log.Printf(" [linebot] error: %v\n", err.Error())
 					return
@@ -132,6 +134,7 @@ func callback(c *gin.Context) {
 				if strings.Contains(message.Text, "太神拉") || message.Text == "carry" {
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "carry"), 3000)
 				}
+				log.Println(audioMsg.OriginalContentURL)
 				if _, err := bot.PushMessage(groupID, audioMsg).Do(); err != nil {
 					log.Printf(" [linebot] error: %v\n", err.Error())
 					return
