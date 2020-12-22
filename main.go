@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/weeee9/godtone/config"
 
@@ -22,6 +24,18 @@ var (
 	bot    *linebot.Client
 	err    error
 )
+
+var cinaLanguage = map[string]struct{}{
+	"視頻": {},
+	"質量": {},
+	"黑客": {},
+	"老鐵": {},
+	"牛逼": {},
+	"激活": {},
+	"高清": {},
+}
+
+var userUseCina = map[string]time.Time{}
 
 func init() {
 	cfg, err = config.Environ()
@@ -85,6 +99,14 @@ func callback(c *gin.Context) {
 	}
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
+
+			// 10 分鐘內不給使用 bot
+			if t, ok := userUseCina[event.Source.UserID]; ok {
+				if time.Since(t) < time.Minute*10 {
+					return
+				}
+			}
+
 			groupID := event.Source.GroupID
 
 			switch message := event.Message.(type) {
@@ -109,6 +131,15 @@ func callback(c *gin.Context) {
 					return
 				}
 			case *linebot.TextMessage:
+
+				if png := checkCinaLanguage(message.Text); png != "" {
+					userUseCina[event.Source.UserID] = time.Now()
+					if _, err := bot.PushMessage(groupID, linebot.NewImageMessage(getImgURL(cfg, png), getImgURL(cfg, png))).Do(); err != nil {
+						log.Printf(" [linebot] error: %v\n", err.Error())
+					}
+					return
+				}
+
 				audioMsg := &linebot.AudioMessage{}
 				if strings.Contains(message.Text, "那我也要睡") {
 					audioMsg = linebot.NewAudioMessage(getM4AURL(cfg, "imGoingToSleep"), 1000)
@@ -142,6 +173,18 @@ func callback(c *gin.Context) {
 			}
 		}
 	}
+}
+
+var pngs = []string{
+	"agent", "bailiff", "canine", "captain", "informant", "judge", "police", "v",
+}
+
+func checkCinaLanguage(text string) string {
+	rand.Seed(time.Now().Unix())
+	if _, ok := cinaLanguage[text]; ok {
+		return pngs[rand.Intn(len(pngs))]
+	}
+	return ""
 }
 
 func getM4AURL(c config.Config, filename string) string {
