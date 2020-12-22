@@ -25,16 +25,6 @@ var (
 	err    error
 )
 
-var cinaLanguage = map[string]struct{}{
-	"視頻": {},
-	"質量": {},
-	"黑客": {},
-	"老鐵": {},
-	"牛逼": {},
-	"激活": {},
-	"高清": {},
-}
-
 var userUseCina = map[string]time.Time{}
 
 func init() {
@@ -175,14 +165,20 @@ func callback(c *gin.Context) {
 	}
 }
 
+var cinaLanguage = []string{
+	"視頻", "質量", "黑客", "老鐵", "牛逼", "激活", "高清",
+}
+
 var pngs = []string{
 	"agent", "bailiff", "canine", "captain", "informant", "judge", "police", "v",
 }
 
 func checkCinaLanguage(text string) string {
 	rand.Seed(time.Now().Unix())
-	if _, ok := cinaLanguage[text]; ok {
-		return pngs[rand.Intn(len(pngs))]
+	for _, word := range cinaLanguage {
+		if strings.Contains(text, word) {
+			return pngs[rand.Intn(len(pngs))]
+		}
 	}
 	return ""
 }
